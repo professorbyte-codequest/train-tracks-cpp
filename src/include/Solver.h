@@ -38,6 +38,7 @@ namespace TrainTracks
     protected:
         Solver()
             : _steps(0)
+            , _reporter(nullptr)
         { }
 
         void Step() {
