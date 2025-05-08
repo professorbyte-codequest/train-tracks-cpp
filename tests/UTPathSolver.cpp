@@ -35,6 +35,18 @@ static Puzzle makeSimpleUnsolvablePuzzle() {
     return p;
 }
 
+static Puzzle makeLargerSolvablePuzzle() {
+    Puzzle p;
+    p.data.rowConstraints = {2, 2, 2, 2, 2, 2, 2, 2, 2,};
+    p.data.colConstraints = {1, 2, 2, 2, 2, 2, 2, 2, 2, 1};
+    p.gridWidth = p.data.colConstraints.size();
+    p.gridHeight = p.data.rowConstraints.size();
+    p.data.startingGrid.assign(p.gridWidth * p.gridHeight, Piece::Empty);
+    p.data.startingGrid[Point{0, 0}.transpose(p.gridWidth)] = Piece::Horizontal;
+    p.data.startingGrid[Point{p.gridWidth - 1, p.gridHeight -1}.transpose(p.gridWidth)] = Piece::Horizontal;
+    return p;
+}
+
 TEST(PathSolverTest, SolvesSimplePuzzle) {
     const auto p = makeSimpleSolvablePuzzle();
     Grid g(p);
@@ -53,6 +65,17 @@ TEST(PathSolverTest, DoesntSolvesimplePuzzle) {
     EXPECT_FALSE(ps.Solve(g));
     // Entry, then no where to go
     EXPECT_EQ(ps.Steps(), 2);
+}
+
+TEST(PathSolverTest, SolvesLargerPuzzle)
+{
+    const auto p = makeLargerSolvablePuzzle();
+    Grid g(p);
+
+    PathSolver ps;
+    EXPECT_TRUE(ps.Solve(g));
+    std::cout << g;
+    EXPECT_EQ(ps.Steps(), 32);
 }
 
 int main(int argc, char** argv) {
