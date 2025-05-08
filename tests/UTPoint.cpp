@@ -93,7 +93,7 @@ TEST(PointTest, StreamOperator) {
     Point p(3, 4);
     std::ostringstream oss;
     oss << p;
-    EXPECT_EQ(oss.str(), std::string("{ 3, 4 }"));
+    EXPECT_EQ(oss.str(), std::string("{3,4}"));
 }
 
 TEST(PointTest, SignFunction) {

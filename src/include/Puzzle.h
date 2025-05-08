@@ -7,8 +7,6 @@
 #include "Piece.h"
 #include "Point.h"
 
-#include "Log.h"
-
 namespace TrainTracks
 {
 

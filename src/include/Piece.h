@@ -3,6 +3,7 @@
 #include <array>
 #include <map>
 #include <string_view>
+#include <iostream>
 
 namespace TrainTracks {
 
@@ -28,6 +29,11 @@ namespace TrainTracks {
             case Piece::CornerSW: return "┐";  // connects south & west
         }
         return "?";
+    }
+
+    inline std::ostream& operator<<(std::ostream& os, const Piece& p) {
+        os << PieceSymbol(p);
+        return os;
     }
 
     inline Piece fromString(const std::string_view s) {

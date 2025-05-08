@@ -153,7 +153,7 @@ namespace TrainTracks {
             0);             // equivalent
     }
     inline std::ostream& operator<<(std::ostream& os, TrainTracks::Point const &p) {
-        os << "{ " << p.x << ", " << p.y << " }";
+        os << "{" << p.x << "," << p.y << "}";
         return os;
     }
 }

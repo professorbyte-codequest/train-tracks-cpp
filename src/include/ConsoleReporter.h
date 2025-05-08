@@ -17,7 +17,7 @@ public:
     }
 
     void Report(uint64_t steps) {
-        std::cout << reset;
+        //std::cout << reset;
         std::cout << grid << std::endl;
         std::cout << "Steps: " << steps << std::endl;
     }

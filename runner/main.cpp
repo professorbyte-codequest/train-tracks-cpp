@@ -13,7 +13,7 @@ int main(int argc, char** argv) {
     TrainTracks::PathSolver ps;
     ps.Reporter(&r);
 
-    std::cout << TrainTracks::cls;
+    //std::cout << TrainTracks::cls;
     const auto solved = ps.Solve(grid);
     std::cout << (solved ? "Solved" : "Unable to solve") << std::endl;
     

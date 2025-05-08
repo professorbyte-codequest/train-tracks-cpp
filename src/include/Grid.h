@@ -8,8 +8,6 @@
 #include <vector>
 #include <queue>
 
-#include "Log.h"
-
 namespace TrainTracks {
 
     class Grid {
@@ -447,7 +445,7 @@ namespace TrainTracks {
                 if (pt == grid._entry || pt == grid._exit) {
                     os << bold_on;
                 }
-                os << PieceSymbol(grid.at(pt));
+                os << grid.at(pt);
                 if (grid._displayConstraints) { os << " "; }
                 if (pt == grid._entry || pt == grid._exit) {
                     os << bold_off;

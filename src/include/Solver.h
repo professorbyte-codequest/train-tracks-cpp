@@ -30,6 +30,11 @@ namespace TrainTracks
         void Reporter(ProgressReporter *reporter) {
             _reporter = reporter;
         }
+
+        uint64_t Steps() const {
+            return _steps;
+        }
+
     protected:
         Solver()
             : _steps(0)
