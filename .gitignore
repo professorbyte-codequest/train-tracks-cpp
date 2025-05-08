@@ -12,6 +12,11 @@
 *.pch
 
 # Compiled Dynamic libraries
+# Compiled object files
+*.o
+*.obj
+
+# Compiled dynamic libraries
 *.so
 *.dylib
 *.dll
@@ -30,3 +35,35 @@
 *.exe
 *.out
 *.app
+# Compiled static libraries
+*.lib
+*.a
+
+# Executable files
+*.exe
+*.out
+*.app
+
+# CMake build directories
+/CMakeFiles/
+/CMakeCache.txt
+/build/
+/cmake-build-*/
+/Testing
+/DartConfiguration.tcl
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# Generated files
+Makefile
+makefile
+compile_commands.json
+CTestTestfile.cmake
+cmake_install.cmake
+
+# IDE specific files
+.idea/
+.vscode/
+*.code-workspace
