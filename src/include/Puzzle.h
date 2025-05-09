@@ -96,7 +96,7 @@ namespace TrainTracks
             puzzle.data.startingGrid.resize(puzzle.gridWidth * puzzle.gridHeight);
             
             for (const auto &fp : fixedPieces) {
-                puzzle.data.startingGrid[fp.first.transpose(puzzle.gridWidth)] = fp.second;
+                puzzle.data.startingGrid[fp.first.project(puzzle.gridWidth)] = fp.second;
             }
 
             return puzzle;

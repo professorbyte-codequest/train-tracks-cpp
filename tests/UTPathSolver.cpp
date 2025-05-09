@@ -6,6 +6,7 @@
 #include "Puzzle.h"
 #include "Piece.h"
 #include "Point.h"
+#include "ConsoleReporter.h"
 
 using namespace TrainTracks;
 
@@ -17,8 +18,8 @@ static Puzzle makeSimpleSolvablePuzzle() {
     p.gridHeight = 3;
     // Two vertical pieces at (1,0) and (1,2) as exits
     p.data.startingGrid.assign(9, Piece::Empty);
-    p.data.startingGrid[Point{1, 0}.transpose(3)] = Piece::Vertical;
-    p.data.startingGrid[Point{1, 2}.transpose(3)] = Piece::Vertical;
+    p.data.startingGrid[Point{1, 0}.project(3)] = Piece::Vertical;
+    p.data.startingGrid[Point{1, 2}.project(3)] = Piece::Vertical;
     return p;
 }
 
@@ -30,8 +31,8 @@ static Puzzle makeSimpleUnsolvablePuzzle() {
     p.gridHeight = 3;
     // Two vertical pieces at (1,0) and (1,2) as exits, but they can't connect
     p.data.startingGrid.assign(9, Piece::Empty);
-    p.data.startingGrid[Point{1, 0}.transpose(3)] = Piece::Vertical;
-    p.data.startingGrid[Point{1, 2}.transpose(3)] = Piece::Vertical;
+    p.data.startingGrid[Point{1, 0}.project(3)] = Piece::Vertical;
+    p.data.startingGrid[Point{1, 2}.project(3)] = Piece::Vertical;
     return p;
 }
 
@@ -42,8 +43,8 @@ static Puzzle makeLargerSolvablePuzzle() {
     p.gridWidth = p.data.colConstraints.size();
     p.gridHeight = p.data.rowConstraints.size();
     p.data.startingGrid.assign(p.gridWidth * p.gridHeight, Piece::Empty);
-    p.data.startingGrid[Point{0, 0}.transpose(p.gridWidth)] = Piece::Horizontal;
-    p.data.startingGrid[Point{p.gridWidth - 1, p.gridHeight -1}.transpose(p.gridWidth)] = Piece::Horizontal;
+    p.data.startingGrid[Point{0, 0}.project(p.gridWidth)] = Piece::Horizontal;
+    p.data.startingGrid[Point{p.gridWidth - 1, p.gridHeight -1}.project(p.gridWidth)] = Piece::Horizontal;
     return p;
 }
 
@@ -76,6 +77,83 @@ TEST(PathSolverTest, SolvesLargerPuzzle)
     EXPECT_TRUE(ps.Solve(g));
     std::cout << g;
     EXPECT_EQ(ps.Steps(), 32);
+}
+
+TEST(PathSolverTest, LargeJsonPuzzle) {
+    // Arrange: create puzzle from JSON
+    Puzzle p;
+    p.gridWidth  = 12;
+    p.gridHeight = 12;
+
+    p.data.rowConstraints = {
+        5, 1, 2, 3, 9, 4, 6, 7, 7, 10, 7, 4
+    };
+    p.data.colConstraints = {
+        5, 10, 5, 4, 5, 8, 6, 6, 4, 3, 4, 5
+    };
+
+    // startingGrid values map directly to Piece enum underlying ints:
+    // 0=Empty, 3=Horizontal, 4=Vertical, 5=CornerNE, 6=CornerSE, 7=CornerSW, 8=CornerNW
+    std::vector<int> flat = {
+        0,0,0,0,0,8, 0,0,0,0,0,0,
+        0,0,0,0,0,0, 0,0,0,0,0,0,
+        0,0,0,0,0,0, 0,0,0,0,0,0,
+        0,0,0,0,0,0, 0,0,0,0,0,0,
+        0,0,0,0,0,0, 0,0,0,0,0,0,
+        0,0,0,0,0,0, 0,0,0,0,0,0,
+        0,0,0,0,0,0, 0,0,0,0,0,0,
+        0,0,0,0,0,0, 0,0,0,0,0,0,
+        0,0,0,0,0,0, 0,0,0,0,0,0,
+        0,0,0,6,0,0, 3,0,0,6,0,0,
+        3,0,0,0,0,0, 0,0,0,0,0,0,
+        0,0,0,0,0,5, 0,0,0,0,5,0
+    };
+    // convert to Pieces
+    p.data.startingGrid.reserve(flat.size());
+    for (int v : flat) {
+        p.data.startingGrid.push_back(static_cast<Piece>(v));
+    }
+
+    // Act / Assert: verify that load succeeded
+    EXPECT_EQ(p.gridWidth, 12);
+    EXPECT_EQ(p.gridHeight, 12);
+    EXPECT_EQ(p.data.rowConstraints.size(), 12u);
+    EXPECT_EQ(p.data.colConstraints.size(), 12u);
+    EXPECT_EQ(p.data.startingGrid.size(), 12u * 12u);
+
+    // spot‐check a few non‐empty cells:
+    EXPECT_EQ(p.data.startingGrid[5], Piece::CornerNW);   // (5,0)
+    EXPECT_EQ(p.data.startingGrid[6*12 + 0], Piece::CornerSW); // (0,6)
+    EXPECT_EQ(p.data.startingGrid[9*12 + 3], Piece::Vertical); // (3,9)
+    EXPECT_EQ(p.data.startingGrid[11*12 + 5], Piece::CornerSE); // (5,11)
+
+    Grid g(p);
+    PathSolver ps;
+    ConsoleReporter r(g, 1000);
+    ps.Reporter(&r);
+    g.displayConstraints(true);
+    EXPECT_TRUE(ps.Solve(g));
+    std::cout << g;
+    EXPECT_EQ(ps.Steps(), 32);
+
+    const std::string solution = R"( ┌───┘      
+ │          
+┌┘          
+│    ┌┐     
+└┐   │└────┐
+ │   │    ┌┘
+ │   │ ┌──┘ 
+ │┌──┘┌┘    
+ └┘   │ ┌──┐
+┌─────┘┌┘  │
+└───┐  │   └
+    └──┘    )";
+
+    g.displayConstraints(false);
+    std::stringstream ss;
+    ss << g;
+    std::string grid_string = ss.str();
+    EXPECT_EQ(grid_string, solution);
 }
 
 int main(int argc, char** argv) {

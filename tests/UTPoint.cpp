@@ -109,9 +109,9 @@ TEST(PointTest, AbsAndManhattan) {
     EXPECT_EQ(Point(1, 1).manhattan(Point(4, 6)), 8);
 }
 
-TEST(PointTest, Transpose) {
+TEST(PointTest, Project) {
     Point p(2, 3);
-    EXPECT_EQ(p.transpose(10), 3 * 10 + 2);
+    EXPECT_EQ(p.project(10), 3 * 10 + 2);
 }
 
 TEST(PointTest, Inverse) {

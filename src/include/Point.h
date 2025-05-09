@@ -87,7 +87,7 @@ namespace TrainTracks {
             return (*this - o).abs();
         }
 
-        inline int32_t transpose(int32_t w) const noexcept {
+        inline int64_t project(int32_t w) const noexcept {
             return y * w + x;
         }
 
@@ -125,6 +125,7 @@ namespace TrainTracks {
     using PointPair = std::pair<Point, Point>;
     using PointList = std::list<Point>;
     using PointBoolMap = std::unordered_map<Point, bool, PointHasher>;
+    using PointSet = std::unordered_set<Point, PointHasher>;
 
     // Same comparison semantics as a std::pair
     constexpr inline bool operator<(TrainTracks::Point const& l, TrainTracks::Point const& r) {

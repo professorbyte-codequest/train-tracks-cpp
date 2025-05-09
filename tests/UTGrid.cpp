@@ -17,8 +17,8 @@ static Puzzle makeSimplePuzzle() {
     p.gridHeight = 3;
     // Two vertical pieces at (1,0) and (1,2) as exits
     p.data.startingGrid.assign(9, Piece::Empty);
-    p.data.startingGrid[Point{1, 0}.transpose(3)] = Piece::Vertical;
-    p.data.startingGrid[Point{1, 2}.transpose(3)] = Piece::Vertical;
+    p.data.startingGrid[Point{1, 0}.project(3)] = Piece::Vertical;
+    p.data.startingGrid[Point{1, 2}.project(3)] = Piece::Vertical;
     return p;
 }
 
@@ -30,8 +30,8 @@ static Puzzle makeSimpleSolvablePuzzle() {
     p.gridHeight = 3;
     // Two vertical pieces at (1,0) and (1,2) as exits
     p.data.startingGrid.assign(9, Piece::Empty);
-    p.data.startingGrid[Point{1, 0}.transpose(3)] = Piece::Vertical;
-    p.data.startingGrid[Point{1, 2}.transpose(3)] = Piece::Vertical;
+    p.data.startingGrid[Point{1, 0}.project(3)] = Piece::Vertical;
+    p.data.startingGrid[Point{1, 2}.project(3)] = Piece::Vertical;
     return p;
 }
 
