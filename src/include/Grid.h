@@ -18,6 +18,7 @@ namespace TrainTracks {
             , _cols(cols)
             , _bottom(_rows - 1)
             , _right(cols - 1)
+            , _fixedCount(0)
             , _totalCount(0)
             , _placedCount(0)
             , _displayConstraints(false)
@@ -44,6 +45,7 @@ namespace TrainTracks {
                     const auto piece = p.data.startingGrid[pt.project(_cols)];
                     if (piece != Piece::Empty) {
                         place(pt, piece);
+                        _fixedCount++;
                     }
                 }
             }
@@ -190,18 +192,24 @@ namespace TrainTracks {
             }
             if (hasNeighbor && !connectsToAny) return false;
             
+            int newTrackingInRowCount = trackInRowCount(pt.y) + 1;
+            int newTrackingInColCount = trackInColCount(pt.x) + 1;
             // Look-ahead to ensure we have capacity in neighboring row/col
             for (const auto d : Connections::GetConnections(p)) {
                 const auto n = pt + d;
                 if (!isInBounds(n)) { return false; }
 
                 if (isEmpty(n)) {
-                    if (trackInRowCount(n.y) >= _rowConstraints[n.y] ||
-                        trackInColCount(n.x) >= _colConstraints[n.x]) {
+                    const auto rowCount = n.y == pt.y ? newTrackingInRowCount : trackInRowCount(n.y);
+                    const auto colCount = n.x == pt.x ? newTrackingInColCount : trackInColCount(n.x);
+                    if (rowCount >= _rowConstraints[n.y] ||
+                        colCount >= _colConstraints[n.x]) {
                         return false;
                     }
                 }
             }
+
+            DEBUG_LOG(pt, p, trackInRowCount(pt.y), _rowConstraints[pt.y], trackInColCount(pt.x), _colConstraints[pt.x]);
     
             return true;
         }
@@ -339,446 +347,162 @@ namespace TrainTracks {
         int64_t flatten(const Point& p) const {
             return p.y * _rows + p.x;
         }
+
+        int fixedCount() const {
+            return _fixedCount;
+        }
     private:
+
+        struct EdgeConstrains {
+            int idx; // the row or column index
+            bool isRow; // true if row, false if column
+            Point iterator; // iterator to the next row/col
+            std::vector<int>& constraints;
+            std::vector<int>& placed;
+        };
+
+        struct SingleRowConstraints {
+            bool isRow;
+            int max;
+            Point iterator;
+            std::vector<int>& constraints;
+            std::vector<int>& placed;
+        };
         void placeObviousPieces() {
-            // on the edges, if there are a max of two, we can place if there
-            // is already one piece in the row/col
-            if (_rowConstraints[0] == 2) {
-                for (int c = 0; _placedInRow[0] == 1 && c < _cols; c++) {
-                    const Point pt{c, 0};
-                    const auto p = at(pt);
-                    if (p == Piece::Empty) {
-                        continue;
-                    }
-                    switch (p) {
-                        case Piece::Horizontal:
-                            // This must be an entry or exit
-                            if (c == 0) {
-                                assert(canPlace(Point(c + 1, 0), Piece::CornerSW));
-                                place(Point(c + 1, 0), Piece::CornerSW);
-                            } else if (c == _right) {
-                                assert(canPlace(Point(c - 1, 0), Piece::CornerSE));
-                                place(Point(c - 1, 0), Piece::CornerSE);
-                            }
-                            break;
-                        
-                        case Piece::CornerSE:
-                            // This must loop back in to the grid
-                            assert(canPlace(Point(c + 1, 0), Piece::CornerSW));
-                            place(Point(c + 1, 0), Piece::CornerSW);
-                            break;
-                        case Piece::CornerSW:
-                            // This must loop back in to the grid
-                            assert(canPlace(Point(c - 1, 0), Piece::CornerSE));
-                            place(Point(c - 1, 0), Piece::CornerSE);
-                            break;
-                        case Piece::CornerNE:
-                            // This must be an entry or exit, so loop back in
-                            assert(canPlace(Point(c + 1, 0), Piece::CornerSW));
-                            place(Point(c + 1, 0), Piece::CornerSW);
-                            break;
-                        case Piece::CornerNW:
-                            // This must be an entry or exit, so loop back in
-                            assert(canPlace(Point(c - 1, 0), Piece::CornerSE));
-                            place(Point(c - 1, 0), Piece::CornerSE);
-                            break;
-                        default:
-                            break;
-                    }
+
+            std::array<EdgeConstrains, 4> edgeConstraints { {
+                  { 0, true, Point{1, 0}, _rowConstraints, _placedInRow },
+                  { _bottom, true, Point{1, 0}, _rowConstraints, _placedInRow },
+                  { 0, false, Point{0, 1},  _colConstraints, _placedInCol },
+                  {_right, false, Point{0, 1}, _colConstraints, _placedInCol }
                 }
-            }
+            };
+
+            for (const auto& ec : edgeConstraints) {
+                if (ec.constraints[ec.idx] != 2) {
+                    continue;
+                }
+
+                DEBUG_LOG(ec.idx, ec.isRow);
         
-            if (_rowConstraints[_right] == 2) {
-                for (int c = 0; _placedInRow[_right] == 1 && c < _cols; c++) {
-                    const Point pt{c, _right};
-                    const auto p = at(pt);
-                    if (p == Piece::Empty) {
-                        continue;
+                Point pos { ec.isRow ? 0 : ec.idx, ec.isRow ? ec.idx : 0 };
+                while (isInBounds(pos) && ec.placed[ec.idx] == 1) {
+                    const auto p = at(pos);
+                    if (p != Piece::Empty) {
+                        DEBUG_LOG(pos, p);
+                        // Get the connections for the piece which go back into the grid
+                        int dirs = 0;
+                        Point placeAt = pos;
+                        for (const auto &d : Connections::GetConnections(p)) {
+                            const auto n = pos + d;
+                            if (isInBounds(n) && isEmpty(n)) {
+                                dirs++;
+                                placeAt = n;
+                            }
+                        }
+                        DEBUG_LOG(pos, p, placeAt, dirs);
+                        // If we don't have a single connection, just move on
+                        if (dirs != 1) {
+                            break;
+                        }
+
+                        // Find a piece we can place, canPlace will help us
+                        for (const auto p : ValidPieces) {
+                            if (canPlace(placeAt, p)) {
+                                place(placeAt, p);
+                                break;
+                            }
+                        }
+                        break;
                     }
-                    switch (p) {
-                        case Piece::Horizontal:
-                            // This must be an entry or exit
-                            if (c == 0) {
-                                assert(canPlace(Point(c + 1, _right), Piece::CornerNW));
-                                place(Point(c + 1, _right), Piece::CornerNW);
-                            } else if (c == _right) {
-                                assert(canPlace(Point(c - 1, _right), Piece::CornerNE));
-                                place(Point(c - 1, _right), Piece::CornerNE);
-                            }
-                            break;
-                        
-                        case Piece::CornerNE:
-                            // This must loop back in to the grid
-                            assert(canPlace(Point(c + 1, _right), Piece::CornerNW));
-                            place(Point(c + 1, _right), Piece::CornerNW);
-                            break;
-                        case Piece::CornerNW:
-                            // This must loop back in to the grid
-                            assert(canPlace(Point(c - 1, _right), Piece::CornerNE));
-                            place(Point(c - 1, _right), Piece::CornerNE);
-                            break;
-                        case Piece::CornerSE:
-                            // This must be an entry or exit, so loop back in
-                            assert(canPlace(Point(c + 1, _right), Piece::CornerNW));
-                            place(Point(c + 1, _right), Piece::CornerNW);
-                            break;
-                        case Piece::CornerSW:
-                            // This must be an entry or exit, so loop back in
-                            assert(canPlace(Point(c - 1, _right), Piece::CornerNE));
-                            place(Point(c - 1, _right), Piece::CornerNE);
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            }
-        
-            if (_colConstraints[0] == 2) {
-                for (int r = 0; _placedInCol[0] == 1 && r < _rows; r++) {
-                    const Point pt{0, r};
-                    const auto p = at(pt);
-                    if (p == Piece::Empty) {
-                        continue;
-                    }
-                    switch (p) {
-                        case Piece::Vertical:
-                            // This must be an entry or exit
-                            if (r == 0) {
-                                assert(canPlace(Point(0, r + 1), Piece::CornerSW));
-                                place(Point(0, r + 1), Piece::CornerSW);
-                            } else if (r == _bottom) {
-                                assert(canPlace(Point(0, r - 1), Piece::CornerNW));
-                                place(Point(0, r - 1), Piece::CornerNW);
-                            }
-                            break;
-                        
-                        case Piece::CornerNE:
-                            if (r > 0) {
-                                // This must loop back in to the grid
-                                assert(canPlace(Point(0, r - 1), Piece::CornerSW));
-                                place(Point(0, r - 1), Piece::CornerSW);
-                            }
-                            break;
-                        case Piece::CornerSE:
-                            if (r < _bottom) {
-                                // This must loop back in to the grid
-                                assert(canPlace(Point(0, r + 1), Piece::CornerNW));
-                                place(Point(0, r + 1), Piece::CornerNW);
-                            }
-                            break;
-                        case Piece::CornerNW:
-                            // This must be an entry or exit, so loop back in
-                            assert(canPlace(Point(0, r - 1), Piece::CornerSW));
-                            place(Point(0, r - 1), Piece::CornerSW);
-                            break;
-                        case Piece::CornerSW:
-                            // This must be an entry or exit, so loop back in
-                            assert(canPlace(Point(0, r - 1), Piece::CornerNW));
-                            place(Point(0, r - 1), Piece::CornerNW);
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            }
-       
-            if (_colConstraints[_bottom] == 2) {
-                for (int r = 0; _placedInCol[_bottom] == 1 && r < _rows; r++) {
-                    const Point pt{_bottom, r};
-                    const auto p = at(pt);
-                    if (p == Piece::Empty) {
-                        continue;
-                    }
-                    switch (p) {
-                        case Piece::Vertical:
-                            // This must be an entry or exit
-                            if (r == 0) {
-                                assert(canPlace(Point(_bottom, r + 1), Piece::CornerNW));
-                                place(Point(_bottom, r + 1), Piece::CornerNW);
-                            } else if (r == _bottom) {
-                                assert(canPlace(Point(_bottom, r - 1), Piece::CornerNE));
-                                place(Point(_bottom, r - 1), Piece::CornerNE);
-                            }
-                            break;
-                        
-                        case Piece::CornerNW:
-                            if (r > 0) {
-                                // This must loop back in to the grid
-                                assert(canPlace(Point(_bottom, r - 1), Piece::CornerNW));
-                                place(Point(_bottom, r - 1), Piece::CornerNW);
-                            }
-                            break;
-                        case Piece::CornerSW:
-                            if (r < _bottom) {
-                                // This must loop back in to the grid
-                                assert(canPlace(Point(_bottom, r + 1), Piece::CornerNE));
-                                place(Point(_bottom, r + 1), Piece::CornerNE);
-                            }
-                            break;
-                        case Piece::CornerNE:
-                            // This must be an entry or exit, so loop back in
-                            assert(canPlace(Point(_bottom, r - 1), Piece::CornerSW));
-                            place(Point(_bottom, r - 1), Piece::CornerSW);
-                            break;
-                        case Piece::CornerSE:
-                            // This must be an entry or exit, so loop back in
-                            assert(canPlace(Point(_bottom, r + 1), Piece::CornerSE));
-                            place(Point(_bottom, r + 1), Piece::CornerSE);
-                            break;
-                        default:
-                            break;
-                    }
+
+                    pos += ec.iterator;
                 }
             }
 
-            // For rows with a single piece, we know the adjacent rows must connect
-            // through it
-            for (int r = 1; r < _rows - 1; r++) {
-                // We need to place a veritcal piece in the row, but to do that, we
-                // need to connect to it.  find the nearest piece in the row above
-                if (_rowConstraints[r] == 1 && _placedInRow[r] == 0) {
-                    // If there is only a single piece in the row above, we
-                    // can place a vertical piece in this row, with a corner
-                    // in the row above connecting to the piece in that row
-                    if (_placedInRow[r - 1] == 1) {
-                        int toPlaceAbove = _rowConstraints[r - 1] - _placedInRow[r - 1];
-                        // Find the piece in the row above
-                        Point ptAbove;
-                        Piece pAbove = Piece::Empty;
-                        for (int c = 0; c < _cols; c++) {
-                            const Point pt{c, r - 1};
-                            if (!isEmpty(pt)) {
-                                ptAbove = pt;
-                                pAbove = at(pt);
-                                break;
-                            }
-                        }
-                        assert(pAbove != Piece::Empty);
-                        if (pAbove == Piece::Horizontal &&
-                            ptAbove != _exit &&
-                            ptAbove != _entry) {
-                            // We need more information about the piece, so skip it
-                            continue;
-                        }
+            std::array<SingleRowConstraints, 2> singleRowConstraints { {
+                  { true, _rows, Point{0, 1}, _rowConstraints, _placedInRow },
+                  { false, _cols, Point{1, 0}, _colConstraints, _placedInCol }
+                }
+            };
 
-                        // Get the horizontal connection direction for pAbove
-                        const auto conns = Connections::GetConnections(pAbove);
-                        Point connDir;
-                        for (const auto& d : conns) {
-                            if (d.y == 0 && isInBounds(ptAbove + d)) {
-                                connDir = d;
-                                break;
-                            }
-                        }
-                        assert(connDir != Point::origin());
-                        // Now, from that piece above, we can walk toPlaceAbove - 1
-                        // and place horizontals in each, then a corner to this row,
-                        // and then a vertical piece in this row
-                        for (int i = 0; i < toPlaceAbove - 1; i++) {
-                            const Point pt{ptAbove.x + connDir.x * (i + 1),
-                                ptAbove.y};
-                            assert(canPlace(pt, Piece::Horizontal));
-                            place(pt, Piece::Horizontal);
-                        }
-                        // Now, place the corner
-                        if (sgn(connDir.x) == 1) {
-                            // This is a CornerSW
-                            assert(canPlace(Point(ptAbove.x + connDir.x * toPlaceAbove, ptAbove.y), Piece::CornerSW));
-                            place(Point(ptAbove.x + connDir.x * toPlaceAbove, ptAbove.y), Piece::CornerSW);
-                        } else {
-                            // This is a CornerSE
-                            assert(canPlace(Point(ptAbove.x + connDir.x * toPlaceAbove, ptAbove.y), Piece::CornerSE));
-                            place(Point(ptAbove.x + connDir.x * toPlaceAbove, ptAbove.y), Piece::CornerSE);
-                        }
-                        // Now, place the vertical piece
-                        assert(canPlace(Point(ptAbove.x + connDir.x * toPlaceAbove, r), Piece::Vertical));
-                        place(Point(ptAbove.x + connDir.x * toPlaceAbove, r), Piece::Vertical);
-                    }
-                
-                    // Repeat for the row below
-                    if (_placedInRow[r + 1] == 1) {
-                        int toPlaceBelow = _rowConstraints[r + 1] - _placedInRow[r + 1];
-                        // Find the piece in the row below
-                        Point ptBelow;
-                        Piece pBelow = Piece::Empty;
-                        for (int c = 0; c < _cols; c++) {
-                            const Point pt{c, r + 1};
-                            if (!isEmpty(pt)) {
-                                ptBelow = pt;
-                                pBelow = at(pt);
-                                break;
-                            }
-                        }
-                        assert(pBelow != Piece::Empty);
-                        if (pBelow == Piece::Horizontal &&
-                            ptBelow != _exit &&
-                            ptBelow != _entry) {
-                            // We need more information about the piece, so skip it
-                            continue;
-                        }
+            for (const auto& src : singleRowConstraints) {
+                for (int i = 1; i < src.max - 1; i++) {
+                    if (src.constraints[i] == 1 && src.placed[i] == 0) {
+                        // We can maybe place a piece in this row/col
+                        // First, find the nearest piece in adjacent row/col
+                        // which faces us where the row/col has only a
+                        // single piece
+                        Point pos{src.isRow ? 0 : i, src.isRow ? i : 0};
+                        std::array<Point, 2> adjacent{ pos + src.iterator,
+                            pos - src.iterator };
+                        for (const auto& adj : adjacent) {
+                            if (isInBounds(adj) && src.placed[ src.isRow ? adj.y : adj.x] == 1)
+                            {
+                                const auto toPlace = src.constraints[ src.isRow ? adj.y : adj.x] - src.placed[ src.isRow ? adj.y : adj.x];
+                                // Now walk along the row/col until we find the piece
+                                const Point step = src.isRow ? Point{1, 0} : Point{0, 1};
+                                DEBUG_LOG(pos, adj, step);
+                                Point pt = adj;
+                                while (isInBounds(pt) && src.placed[ src.isRow ? pt.y : pt.x] == 1) {
+                                    const auto p = at(pt);
+                                    if (p == Piece::Empty) {
+                                        pt += step;
+                                        continue;
+                                    }
+                                    DEBUG_LOG(pt, p);
+                                    // Get the connections for the piece which go perpendicular
+                                    int dirs = 0;
+                                    Point dir = Point::origin();
+                                    for (const auto &d : Connections::GetConnections(p)) {
+                                        if (step.x == 0 && d.x != 0 ||
+                                            step.y == 0 && d.y != 0) {
+                                            continue;
+                                        }
+                                        dir = d;
+                                        dirs++;
+                                    }
+                                    DEBUG_LOG(pt, p, dirs);
+                                    // If we don't have a single connection, just move on
+                                    if (dirs != 1) {
+                                        break;
+                                    }
 
-                        // Get the horizontal connection direction for pBelow
-                        const auto conns = Connections::GetConnections(pBelow);
-                        Point connDir;
-                        for (const auto& d : conns) {
-                            if (d.y == 0 && isInBounds(ptBelow + d)) {
-                                connDir = d;
-                                break;
-                            }
-                        }
-                        assert(connDir != Point::origin());
-                        // Now, from that piece be,low, we can walk toPlaceBelow - 1
-                        // and place horizontals in each, then a corner to this row,
-                        // and then a vertical piece in this row
-                        for (int i = 0; i < toPlaceBelow - 1; i++) {
-                            const Point pt{ptBelow.x + connDir.x * (i + 1),
-                                ptBelow.y};
-                            assert(canPlace(pt, Piece::Horizontal));
-                            place(pt, Piece::Horizontal);
-                        }
+                                    // Now, we step in the direction of the piece, toPlace - 1 places
+                                    // and place the horizontal/vertical piece
+                                    for (int j = 1; j < toPlace; j++) {
+                                        const Point t{pt + dir * j};
+                                        const Piece toPlace = src.isRow ? Piece::Horizontal : Piece::Vertical;
+                                        DEBUG_LOG(j, t, toPlace, at(t));
+                                        if (!canPlace(t, toPlace)) {
+                                            break;
+                                        }
+                                        place(t, toPlace);
+                                    }
+                                    // Now, place the corner
+                                    // we need to know if it is a south or north corner
+                                    auto placeAt = pt + dir * toPlace;
+                                    const auto exit = dir.inverse();
+                                    const auto entry = pos - adj;
+                                    const auto corner = Connections::GetPiece(exit, entry);
+                                    DEBUG_LOG(entry, exit, placeAt, corner);
 
-                        // Now, place the corner
-                        if (sgn(connDir.x) == 1) {
-                            // This is a CornerNW
-                            assert(canPlace(Point(ptBelow.x + connDir.x * toPlaceBelow, ptBelow.y), Piece::CornerNW));
-                            place(Point(ptBelow.x + connDir.x * toPlaceBelow, ptBelow.y), Piece::CornerNW);
-                        } else {
-                            // This is a CornerNE
-                            assert(canPlace(Point(ptBelow.x + connDir.x * toPlaceBelow, ptBelow.y), Piece::CornerNE));
-                            place(Point(ptBelow.x + connDir.x * toPlaceBelow, ptBelow.y), Piece::CornerNE);
-                        }
-                        // Now, place the vertical piece (if we didn't already)
-                        Point pt{ptBelow.x + connDir.x * toPlaceBelow, r};
-                        if (isEmpty(pt)) {
-                            assert(canPlace(pt, Piece::Vertical));
-                            place(pt, Piece::Vertical);
+                                    if(canPlace(placeAt, corner)) {
+                                        place(placeAt, corner);
+                                        // Now, place the piece
+                                        placeAt = placeAt + exit;
+                                        if (canPlace(placeAt, src.isRow ? Piece::Vertical : Piece::Horizontal)) {
+                                            place(placeAt, src.isRow ? Piece::Vertical : Piece::Horizontal);
+                                        }
+                                    }
+
+                                    break;
+                                }
+                            }
                         }
                     }
                 }
-            }
-        
-            // For columns with a single piece, we know the adjacent columns must connect
-            // through it
-            for (int c = 1; c < _cols - 1; c++) {
-                // We need to place a horizontal piece in the column, but to do that, we
-                // need to connect to it.  find the nearest piece in the column above
-                if (_colConstraints[c] == 1 && _placedInCol[c] == 0) {
-                    // If there is only a single piece in the column above, we
-                    // can place a horizontal piece in this column, with a corner
-                    // in the column to the left connecting to the piece in that column
-                    if (_placedInCol[c - 1] == 1) {
-                        int toPlaceLeft = _colConstraints[c - 1] - _placedInCol[c - 1];
-                        // Find the piece in the column above
-                        Point ptLeft;
-                        Piece pLeft = Piece::Empty;
-                        for (int r = 0; r < _rows; r++) {
-                            const Point pt{c, r};
-                            if (!isEmpty(pt)) {
-                                ptLeft = pt;
-                                pLeft = at(pt);
-                                break;
-                            }
-                        }
-                        assert(pLeft != Piece::Empty);
-                        if (pLeft == Piece::Vertical &&
-                            ptLeft != _exit &&
-                            ptLeft != _entry) {
-                            // We need more information about the piece, so skip it
-                            continue;
-                        }
 
-                        // Get the vertical connection direction for pLeft
-                        const auto conns = Connections::GetConnections(pLeft);
-                        Point connDir;
-                        for (const auto& d : conns) {
-                            if (d.x == 0) {
-                                connDir = d;
-                                break;
-                            }
-                        }
-                        assert(connDir != Point::origin());
-                        // Now, from that piece above, we can walk toPlaceLeft - 1
-                        // and place horizontals in each, then a corner to this row,
-                        // and then a vertical piece in this row
-                        for (int i = 0; i < toPlaceLeft - 1; i++) {
-                            const Point pt{ptLeft.x,
-                                ptLeft.y + connDir.y * (i + 1)};
-                            assert(canPlace(pt, Piece::Vertical));
-                            place(pt, Piece::Vertical);
-                        }
-                        // Now, place the corner
-                        if (sgn(connDir.y) == 1) {
-                            // This is a CornerSE
-                            assert(canPlace(Point(ptLeft.x, ptLeft.y + connDir.y * toPlaceLeft), Piece::CornerSE));
-                            place(Point(ptLeft.x, ptLeft.y + connDir.y * toPlaceLeft), Piece::CornerSE);
-                        } else {
-                            // This is a CornerNE
-                            assert(canPlace(Point(ptLeft.x, ptLeft.y + connDir.y * toPlaceLeft), Piece::CornerNE));
-                            place(Point(ptLeft.x, ptLeft.y + connDir.y * toPlaceLeft), Piece::CornerNE);
-                        }
-
-                        // Now, place the horizontal piece
-                        assert(canPlace(Point(c, ptLeft.y + connDir.y * toPlaceLeft), Piece::Horizontal));
-                        place(Point(c, ptLeft.y + connDir.y * toPlaceLeft), Piece::Horizontal);
-                    }
-                
-                    // Repeat to the right
-                    if (_placedInCol[c + 1] == 1) {
-                        int toPlaceRight = _colConstraints[c + 1] - _placedInCol[c + 1];
-                        // Find the piece in the column above
-                        Point ptRight;
-                        Piece pRight = Piece::Empty;
-                        for (int r = 0; r < _rows; r++) {
-                            const Point pt{c, r};
-                            if (!isEmpty(pt)) {
-                                ptRight = pt;
-                                pRight = at(pt);
-                                break;
-                            }
-                        }
-                        assert(pRight != Piece::Empty);
-                        if (pRight == Piece::Vertical &&
-                            ptRight != _exit &&
-                            ptRight != _entry) {
-                            // We need more information about the piece, so skip it
-                            continue;
-                        }
-
-                        // Get the vertical connection direction for pRight
-                        const auto conns = Connections::GetConnections(pRight);
-                        Point connDir;
-                        for (const auto& d : conns) {
-                            if (d.x == 0) {
-                                connDir = d;
-                                break;
-                            }
-                        }
-                        assert(connDir != Point::origin());
-                        // Now, from that piece right, we can walk toPlaceRight - 1
-                        // and place verticals in each, then a corner to this col,
-                        // and then a horizontal piece in this col
-                        for (int i = 0; i < toPlaceRight - 1; i++) {
-                            const Point pt{ptRight.x,
-                                ptRight.y + connDir.y * (i + 1)};
-                            assert(canPlace(pt, Piece::Vertical));
-                            place(pt, Piece::Vertical);
-                        }
-                        // Now, place the corner
-                        if (sgn(connDir.y) == 1) {
-                            // This is a CornerSW
-                            assert(canPlace(Point(ptRight.x, ptRight.y + connDir.y * toPlaceRight), Piece::CornerSW));
-                            place(Point(ptRight.x, ptRight.y + connDir.y * toPlaceRight), Piece::CornerSW);
-                        } else {
-                            // This is a CornerNW
-                            assert(canPlace(Point(ptRight.x, ptRight.y + connDir.y * toPlaceRight), Piece::CornerNW));
-                            place(Point(ptRight.x, ptRight.y + connDir.y * toPlaceRight), Piece::CornerNW);
-                        }
-
-                        // Now, place the horizontal piece
-                        assert(canPlace(Point(c, ptRight.y + connDir.y * toPlaceRight), Piece::Horizontal));
-                        place(Point(c, ptRight.y + connDir.y * toPlaceRight), Piece::Horizontal);
-                    }
-                }
             }
         }
 
@@ -866,6 +590,7 @@ namespace TrainTracks {
         const int _cols;
         const int _bottom;
         const int _right;
+        int _fixedCount;
         int _totalCount;
         int _placedCount;
         bool _displayConstraints;

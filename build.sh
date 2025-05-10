@@ -37,7 +37,7 @@ cmake --build . -- -j"$(nproc)"
 
 # Run all unit tests via CTest
 echo "==> Running unit tests"
-#ctest --output-on-failure
+ctest --output-on-failure
 
 # Install targets into install directory
 echo "==> Installing project into: $INSTALL_DIR"

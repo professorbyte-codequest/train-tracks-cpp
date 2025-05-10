@@ -27,6 +27,8 @@ namespace TrainTracks
             std::vector<bool> visited(grid.width() * grid.height(), false);
             int visited_count = 0;
             int hit = 0;
+
+            DEBUG_LOG(entry, grid.at(entry), grid.exit(), grid.target(), grid.placed());
             
             return TryBuild(grid, entry, getEntryIncoming(grid), visited, visited_count, hit);
         }

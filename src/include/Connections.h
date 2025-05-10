@@ -36,6 +36,15 @@ namespace TrainTracks {
                 return false;
             }
 
+            static Piece GetPiece(const Point& p1, const Point& pt) {
+                for (const auto& p : ValidPieces) {
+                    if (ConnectsTo(p, p1) && ConnectsTo(p, pt)) {
+                        return p;
+                    }
+                }
+                return Piece::Empty;
+            }
+
         private:
             Connections() {
                 Directions.emplace(Piece::Horizontal, PointList{ { -1, 0 }, { 1, 0 } });

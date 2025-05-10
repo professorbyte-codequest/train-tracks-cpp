@@ -5,6 +5,7 @@
 #include "Puzzle.h"
 #include "Piece.h"
 #include "Point.h"
+#include "PathSolver.h"
 
 using namespace TrainTracks;
 
@@ -32,6 +33,25 @@ static Puzzle makeSimpleSolvablePuzzle() {
     p.data.startingGrid.assign(9, Piece::Empty);
     p.data.startingGrid[Point{1, 0}.project(3)] = Piece::Vertical;
     p.data.startingGrid[Point{1, 2}.project(3)] = Piece::Vertical;
+    return p;
+}
+
+/*
+  -+...
+  .|...
+  .+-+.
+  ...++
+  ....+
+*/
+static Puzzle makeSimplePuzzle5x5() {
+    Puzzle p;
+    p.data.rowConstraints = {2, 1, 3, 2, 1};
+    p.data.colConstraints = {1, 3, 1, 2, 2};
+    p.gridWidth = 5;
+    p.gridHeight = 5;
+    p.data.startingGrid.assign(25, Piece::Empty);
+    p.data.startingGrid[Point{0, 0}.project(5)] = Piece::Horizontal;
+    p.data.startingGrid[Point{4, 4}.project(5)] = Piece::CornerNE;
     return p;
 }
 
@@ -134,6 +154,31 @@ TEST(GridTest, ToStringAndOstream) {
     oss << g;
     out = oss.str();
     EXPECT_NE(out.find('0'), std::string::npos);
+}
+
+TEST(GridTest, PlaceObviousPieces) {
+    Puzzle p = makeSimplePuzzle5x5();
+    Grid g(p);
+
+    // The obvious pieces should be placed
+    // Two fixed, plus 2 obvious pieces
+    EXPECT_EQ(g.fixedCount(), 2);
+    EXPECT_EQ(g.placed(), 6);
+    EXPECT_EQ(g.trackInRowCount(0), 2);
+    EXPECT_EQ(g.trackInRowCount(3), 1);
+    EXPECT_EQ(g.trackInColCount(1), 3);
+    EXPECT_EQ(g.trackInColCount(4), 2);
+    EXPECT_EQ(g.at(Point{1, 0}), Piece::CornerSW);
+    EXPECT_EQ(g.at(Point{1, 1}), Piece::Vertical);
+    EXPECT_EQ(g.at(Point{1, 2}), Piece::CornerNE);
+    EXPECT_EQ(g.at(Point{4, 3}), Piece::CornerSW);
+
+    // How we should be able to solve it
+    PathSolver s;
+    EXPECT_TRUE(s.Solve(g));
+    EXPECT_TRUE(g.isComplete());
+
+    std::cout << g;
 }
 
 int main(int argc, char** argv) {
