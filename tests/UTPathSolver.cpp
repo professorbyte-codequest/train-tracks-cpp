@@ -87,7 +87,6 @@ TEST(PathSolverTest, SolvesLargerPuzzle)
 }
 
 TEST(PathSolverTest, LargeJsonPuzzle) {
-    return;
 
     // Arrange: create puzzle from JSON
     Puzzle p;
@@ -104,18 +103,18 @@ TEST(PathSolverTest, LargeJsonPuzzle) {
     // startingGrid values map directly to Piece enum underlying ints:
     // 0=Empty, 3=Horizontal, 4=Vertical, 5=CornerNE, 6=CornerSE, 7=CornerSW, 8=CornerNW
     std::vector<int> flat = {
-        0,0,0,0,0,8, 0,0,0,0,0,0,
-        0,0,0,0,0,0, 0,0,0,0,0,0,
-        0,0,0,0,0,0, 0,0,0,0,0,0,
-        0,0,0,0,0,0, 0,0,0,0,0,0,
-        0,0,0,0,0,0, 0,0,0,0,0,0,
-        0,0,0,0,0,0, 0,0,0,0,0,0,
-        0,0,0,0,0,0, 0,0,0,0,0,0,
-        0,0,0,0,0,0, 0,0,0,0,0,0,
-        0,0,0,0,0,0, 0,0,0,0,0,0,
-        0,0,0,6,0,0, 3,0,0,6,0,0,
-        3,0,0,0,0,0, 0,0,0,0,0,0,
-        0,0,0,0,0,5, 0,0,0,0,5,0
+        0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 8,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 4, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0,
+        6, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5,
+        0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0
     };
     // convert to Pieces
     p.data.startingGrid.reserve(flat.size());
@@ -130,20 +129,19 @@ TEST(PathSolverTest, LargeJsonPuzzle) {
     EXPECT_EQ(p.data.colConstraints.size(), 12u);
     EXPECT_EQ(p.data.startingGrid.size(), 12u * 12u);
 
-    // spot‐check a few non‐empty cells:
-    EXPECT_EQ(p.data.startingGrid[5], Piece::CornerNW);   // (5,0)
-    EXPECT_EQ(p.data.startingGrid[6*12 + 0], Piece::CornerSW); // (0,6)
-    EXPECT_EQ(p.data.startingGrid[9*12 + 3], Piece::Vertical); // (3,9)
-    EXPECT_EQ(p.data.startingGrid[11*12 + 5], Piece::CornerSE); // (5,11)
-
     Grid g(p);
+    // We should have 11 fixed pieces
+    EXPECT_EQ(g.fixedCount(), 11);
+    EXPECT_EQ(g.placed(), 16); // we auto placed 5 pieces
+    EXPECT_EQ(g.trackInRowCount(0), 5);
+    EXPECT_EQ(g.trackInRowCount(1), 1);
     PathSolver ps;
-    ConsoleReporter r(g, 1000);
-    ps.Reporter(&r);
-    g.displayConstraints(true);
-    EXPECT_TRUE(ps.Solve(g));
+    //ConsoleReporter r(g, 1000);
+    //ps.Reporter(&r);
+    //g.displayConstraints(true);
+    //EXPECT_TRUE(ps.Solve(g));
     std::cout << g;
-    EXPECT_EQ(ps.Steps(), 32);
+    //EXPECT_EQ(ps.Steps(), 32);
 
     const std::string solution = R"( ┌───┘      
  │          

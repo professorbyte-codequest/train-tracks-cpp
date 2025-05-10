@@ -490,7 +490,7 @@ namespace TrainTracks {
                                     if(canPlace(placeAt, corner)) {
                                         place(placeAt, corner);
                                         // Now, place the piece
-                                        placeAt = placeAt + exit;
+                                        placeAt = placeAt + entry;
                                         if (canPlace(placeAt, src.isRow ? Piece::Vertical : Piece::Horizontal)) {
                                             place(placeAt, src.isRow ? Piece::Vertical : Piece::Horizontal);
                                         }

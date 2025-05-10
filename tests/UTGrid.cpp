@@ -163,14 +163,17 @@ TEST(GridTest, PlaceObviousPieces) {
     // The obvious pieces should be placed
     // Two fixed, plus 2 obvious pieces
     EXPECT_EQ(g.fixedCount(), 2);
-    EXPECT_EQ(g.placed(), 6);
+    EXPECT_EQ(g.placed(), 7);
     EXPECT_EQ(g.trackInRowCount(0), 2);
+    EXPECT_EQ(g.trackInRowCount(2), 2);
     EXPECT_EQ(g.trackInRowCount(3), 1);
     EXPECT_EQ(g.trackInColCount(1), 3);
+    EXPECT_EQ(g.trackInColCount(2), 1);
     EXPECT_EQ(g.trackInColCount(4), 2);
     EXPECT_EQ(g.at(Point{1, 0}), Piece::CornerSW);
     EXPECT_EQ(g.at(Point{1, 1}), Piece::Vertical);
     EXPECT_EQ(g.at(Point{1, 2}), Piece::CornerNE);
+    EXPECT_EQ(g.at(Point{2, 2}), Piece::Horizontal);
     EXPECT_EQ(g.at(Point{4, 3}), Piece::CornerSW);
 
     // How we should be able to solve it
