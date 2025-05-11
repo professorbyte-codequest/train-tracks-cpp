@@ -46,7 +46,7 @@ namespace TrainTracks
             throw std::runtime_error("Invalid entry, no incoming direction!");
         }
         bool TryBuild(Grid& grid, const Point& pos, const Point& incoming, std::vector<bool>& visited, int& visited_count, int hit) {
-            Step();
+            Step(pos);
             const auto idx = grid.flatten(pos);
 
             // Bounds
@@ -92,18 +92,8 @@ namespace TrainTracks
             visited[idx] = true;
             visited_count++;
 
-/*
-            // Precompute all remaining fixed positions
-            PointList remaining;
-            std::for_each(_fixedPoints.cbegin(), _fixedPoints.cend(), [&grid, &remaining, &visited](const Point& p) {
-                if (!visited[grid.flatten(p)]) {
-                    remaining.push_back(p);
-                }
-            });
-*/
-
             if (candidates.empty()) {
-                std::for_each(ValidPieces.cbegin(), ValidPieces.cend(), [&grid, &candidates, &pos](const Piece& p){
+                std::for_each(ValidPieces.crbegin(), ValidPieces.crend(), [&grid, &candidates, &pos](const Piece& p){
                     if (grid.canPlace(pos, p)) {
                         DEBUG_LOG(pos, p, grid.canPlace(pos, p));
                         candidates.push_back(p);
@@ -134,6 +124,7 @@ namespace TrainTracks
                     grid.remove(pos);
                 }
             }
+            DEBUG_LOG(pos, candidates.size(), visited_count, hit);
             visited[idx] = false;
             visited_count--;
             hit -= isFixed;

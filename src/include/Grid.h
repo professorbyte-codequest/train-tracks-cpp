@@ -141,12 +141,12 @@ namespace TrainTracks {
 
         bool canPlace(const Point& pt, Piece p) const {
             // Must be inbounds
-            if (!isInBounds(pt)) { return false; }
+            if (!isInBounds(pt)) { DEBUG_LOG(!isInBounds(pt)); return false; }
             // Must be empty
-            if (isFilled(pt)) { return false; }
+            if (isFilled(pt)) { DEBUG_LOG(isFilled(pt)); return false; }
             // Must satisfy row counts
-            if (trackInRowCount(pt.y) >= _rowConstraints[pt.y]) { return false; }
-            if (trackInColCount(pt.x) >= _colConstraints[pt.x]) { return false; }
+            if (trackInRowCount(pt.y) >= _rowConstraints[pt.y]) { DEBUG_LOG(_rowConstraints[pt.y]); return false; }
+            if (trackInColCount(pt.x) >= _colConstraints[pt.x]) { DEBUG_LOG(_colConstraints[pt.x]); return false; }
 
             // Entry/Exit requirements - we can't leave the grid
             switch (p) {
@@ -163,7 +163,7 @@ namespace TrainTracks {
                     if (pt.y == 0 || pt.x == _right) { return false; }
                     break;
                 case Piece::CornerSE:
-                    if (pt.y == _bottom || pt.x == 0) { return false; }
+                    if (pt.y == _bottom || pt.x == _right) { return false; }
                     break;
                 case Piece::CornerSW:
                     if (pt.y == _bottom || pt.x == 0) { return false; }
@@ -608,7 +608,7 @@ namespace TrainTracks {
     };
 
     inline std::ostream& operator<<(std::ostream& os, const Grid& grid) {
-        //os << reset << std::endl;
+        os << reset << std::endl;
         if (grid._displayConstraints) {
             os << "  ";
             for (int x = 0; x < grid._cols; x++) {

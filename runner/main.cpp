@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
 
     grid.displayConstraints(true);
 
-    //std::cout << TrainTracks::cls;
+    std::cout << TrainTracks::cls;
     std::cout << "Initial grid:" << std::endl;
     std::cout << grid << std::endl;
     std::cout << "Entry: " << grid.entry() << std::endl;

@@ -18,7 +18,7 @@ namespace TrainTracks
 
         ~ProgressReporter() { }
 
-        virtual void Report(uint64_t steps) = 0;
+        virtual void Report(uint64_t steps, const Point& pos) = 0;
 
         uint64_t interval;
     };
@@ -41,11 +41,11 @@ namespace TrainTracks
             , _reporter(nullptr)
         { }
 
-        void Step() {
+        void Step(const Point& pos) {
             _steps++;
             if (_reporter) {
-                if (_steps % _reporter->interval == 0) {
-                    _reporter->Report(_steps);
+                if (pos == Point(1, 2) || _steps % _reporter->interval == 0) {
+                    _reporter->Report(_steps, pos);
                 }
             }
         }
