@@ -17,17 +17,10 @@ public:
     }
 
     void Report(uint64_t steps, const Point& pos) override {
-        //std::cout << reset;
+        std::cout << reset << std::endl;
         std::cout << grid << std::endl;
         std::cout << "Steps: " << steps << std::endl;
         std::cout << "Current: " << pos << std::endl;
-
-        if (pos == Point(1, 2)) {
-            std::cout << "Press Enter to continue..." << std::endl;
-            std::cin.get();
-        } else {
-            std::cout << "                          " << std::endl;
-        }
     }
 private:
     Grid& grid;

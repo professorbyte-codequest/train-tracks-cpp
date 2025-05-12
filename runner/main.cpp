@@ -65,7 +65,9 @@ int main(int argc, char** argv) {
     ps.Reporter(&r);
 
     const auto solved = ps.Solve(grid);
+    std::cout << TrainTracks::cls;
+    std::cout << grid << std::endl;
     std::cout << (solved ? "Solved" : "Unable to solve") << std::endl;
-    
+    std::cout << "Total steps: " << ps.Steps() << std::endl;
     return 0;
 }

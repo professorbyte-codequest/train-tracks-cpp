@@ -136,11 +136,7 @@ TEST(PathSolverTest, LargeJsonPuzzle) {
     EXPECT_EQ(g.trackInRowCount(0), 5);
     EXPECT_EQ(g.trackInRowCount(1), 1);
     PathSolver ps;
-    //ConsoleReporter r(g, 1000);
-    //ps.Reporter(&r);
-    //g.displayConstraints(true);
-    //EXPECT_TRUE(ps.Solve(g));
-    std::cout << g;
+    EXPECT_TRUE(ps.Solve(g));
     //EXPECT_EQ(ps.Steps(), 32);
 
     const std::string solution = R"( ┌───┘      
@@ -154,14 +150,14 @@ TEST(PathSolverTest, LargeJsonPuzzle) {
  └┘   │ ┌──┐
 ┌─────┘┌┘  │
 └───┐  │   └
-    └──┘    )";
-
+    └──┘    
+)";
+    g.bold(false);
     g.displayConstraints(false);
     std::stringstream ss;
     ss << g;
     std::string grid_string = ss.str();
-    std::cout << grid_string;
-    //EXPECT_EQ(grid_string, solution);
+    EXPECT_EQ(grid_string, solution);
 }
 
 int main(int argc, char** argv) {

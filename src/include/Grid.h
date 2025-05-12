@@ -22,6 +22,7 @@ namespace TrainTracks {
             , _totalCount(0)
             , _placedCount(0)
             , _displayConstraints(false)
+            , _bold(true)
             , _grid(rows * cols, Piece::Empty)
             , _rowConstraints(rows, 0)
             , _colConstraints(cols, 0)
@@ -344,6 +345,10 @@ namespace TrainTracks {
             _displayConstraints = v;
         }
 
+        void bold(bool v) {
+            _bold = v;
+        }
+
         int64_t flatten(const Point& p) const {
             return p.y * _rows + p.x;
         }
@@ -428,7 +433,7 @@ namespace TrainTracks {
 
             for (const auto& src : singleRowConstraints) {
                 for (int i = 1; i < src.max - 1; i++) {
-                    if (src.constraints[i] == 1 && src.placed[i] == 0) {
+                    if (src.constraints[i] - src.placed[i] == 1) {
                         // We can maybe place a piece in this row/col
                         // First, find the nearest piece in adjacent row/col
                         // which faces us where the row/col has only a
@@ -594,6 +599,7 @@ namespace TrainTracks {
         int _totalCount;
         int _placedCount;
         bool _displayConstraints;
+        bool _bold;
 
         Point _entry;
         Point _exit;
@@ -608,7 +614,6 @@ namespace TrainTracks {
     };
 
     inline std::ostream& operator<<(std::ostream& os, const Grid& grid) {
-        os << reset << std::endl;
         if (grid._displayConstraints) {
             os << "  ";
             for (int x = 0; x < grid._cols; x++) {
@@ -621,12 +626,12 @@ namespace TrainTracks {
 
             for (int x = 0; x < grid._cols; x++) {
                 Point pt{x, y};
-                if (pt == grid._entry || pt == grid._exit) {
+                if (grid._bold && (pt == grid._entry || pt == grid._exit)) {
                     os << bold_on;
                 }
                 os << grid.at(pt);
                 if (grid._displayConstraints) { os << " "; }
-                if (pt == grid._entry || pt == grid._exit) {
+                if (grid._bold && (pt == grid._entry || pt == grid._exit)) {
                     os << bold_off;
                 }
             }

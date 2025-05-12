@@ -153,7 +153,7 @@ TEST(GridTest, ToStringAndOstream) {
     oss.str(""); oss.clear();
     oss << g;
     out = oss.str();
-    EXPECT_NE(out.find('0'), std::string::npos);
+    EXPECT_NE(out.find('1'), std::string::npos);
 }
 
 TEST(GridTest, PlaceObviousPieces) {
