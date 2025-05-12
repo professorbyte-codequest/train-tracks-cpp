@@ -43,7 +43,7 @@ int main(int argc, char** argv) {
     }
     
     auto grid = TrainTracks::Grid(puzzle);
-    TrainTracks::ConsoleReporter r(grid, 1000000);
+    TrainTracks::ConsoleReporter r(grid, 10000000);
 
     grid.displayConstraints(true);
 
@@ -64,10 +64,17 @@ int main(int argc, char** argv) {
     TrainTracks::PathSolver ps;
     ps.Reporter(&r);
 
-    const auto solved = ps.Solve(grid);
+    bool solved;
+    double elapsed;
+    {
+        TrainTracks::AutoTimer t("Solving");
+        solved = ps.Solve(grid);
+        elapsed = t.elapsed();
+    }
     std::cout << TrainTracks::cls;
     std::cout << grid << std::endl;
     std::cout << (solved ? "Solved" : "Unable to solve") << std::endl;
     std::cout << "Total steps: " << ps.Steps() << std::endl;
+    std::cout << "Elapsed time: " << elapsed << " seconds" << std::endl;
     return 0;
 }

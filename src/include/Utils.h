@@ -136,4 +136,55 @@ namespace TrainTracks {
     inline std::ostream& reset(std::ostream& os) {
         return os << "\033[1;1H";
     }
+
+    class AutoTimer {
+    private:
+        const bool display_;
+        std::chrono::time_point<std::chrono::high_resolution_clock> start_;
+        const std::string name_;
+    public:
+        AutoTimer(const char *name, bool display)
+            : start_(std::chrono::high_resolution_clock::now())
+            , name_(name)
+            , display_(display)
+        { }
+
+        AutoTimer(const char *name)
+            : AutoTimer(name, true)
+        { }
+
+        AutoTimer()
+            :  AutoTimer("")
+        { }
+
+        ~AutoTimer() {
+            calculate_time(true);
+        }
+
+        double elapsed() const {
+            return calculate_time(display_);
+        }
+
+        void reset() {
+            start_ = std::chrono::high_resolution_clock::now();
+        }
+
+    private:
+        // Needs to be a lambda due to use of auto
+        double calculate_time (bool display) const {
+            const auto end = std::chrono::high_resolution_clock::now();
+
+            // Calculating total time taken by the program.
+            double time_taken = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start_).count();
+            time_taken *= 1e-9;
+
+            if (display) {
+                std::cout << "Elapsed" << (name_.empty() ? "" : " " + name_) << ": " << std::fixed << time_taken << std::setprecision(9) << " sec" << std::endl;
+            }
+        
+            return time_taken;
+        }
+
+    };
+            
 }
